@@ -12,9 +12,9 @@ red, green, and blue images from the three panels/chips don’t line up perfectl
 - **chromatic aberration**  
 caused by the projector’s optics focusing different wavelengths (colors) at different positions, so red/green/blue do not overlap perfectly
 
-Each projector has a **light engine** which is colloquial term for hardware that generates a light amd directs it towards a panel(s) that modulate light, so uniform light becomes an image.
+Each projector has a **light engine** which is colloquial term for hardware that generates a light and directs it towards a panel(s) that modulate light, so uniform light becomes an image.
 
-If projector has a 3 panels, its **light engine** needs to produce 3 light beams (usually red, green and blue) shining precisely on those panels. Then generated images are aligned together using dichroic mirrors (passes one color, reflect others) to form a converged path that goes out through the projector optics.
+If projector has a 3 panels, its **light engine** needs to produce 3 light beams (usually red, green and blue) shining precisely on those panels. Then generated images are aligned together using [dichroic mirrors](https://www.findlight.net/blog/dichroic-mirrors-explained-a-comprehensive-guide/) (passes one color, reflect others) or [dichroic prisms](https://en.wikipedia.org/wiki/Dichroic_prism) (splits/combines different colors to/from one direction) to form a converged path that goes out through the projector optics.
 
 If projector has 1 panels, its **light engine** needs to produce 1 light beam shining precisely on this one panel. By switching lights fast, rapid sequence of red, green, blue beams shines to the same panel and goes through projector optics. Because of persistence of vision (effect in human visual system that persists image a while) full-color image is perceived.
 
@@ -25,17 +25,17 @@ Velerion projectors are 1 panel projector using micromirrors (DLP/DMD) with 3 la
 
 So at the beginning we can cross-out CRT misaligment (duh!) and panel misalignment (theres only 1 panel).
 
-**Light engine** of Valerion projector needs to generate 3 beams of light and align them precisely, so each light color must shine on its panel the same way.  
-If issue would be caused by **light engine** color planes could be shifted relative to each other.   
+**Light engine** of Valerion projector needs to generate 3 beams of light and align them precisely, so each light color must shine on its panel from the same direction.  
+If issue would be caused by **light engine** (sligthly different directions) colors  on the screen would be shifted relative to each other.   
 
 
-When light is modulated (reflected) by its DLP/DMD it becomes a image, and it needs to travel out through a sequence of lenses to form an image on the projection plane.  
+When light is modulated (reflected) by its DLP/DMD it becomes a image, it travels out through a sequence of lenses to form an image on the screen.  
 If issue would be caused by lens this would be a form of chromatic aberration. As chromatic aberration is angle-dependent it would present itself as:
 - **center of screen: no color shift**  
 As it travels through optical path of lens system, there is no color shift.
 - **corner of screen: red shifted to corner, blue towards center**  
 As disance from center of image increase - the amount of color shift increase.  
-As it's easy to blame every color issue on chromatic aberration I've prepared a [small in-browser demo](chromatic_aberration.html), in which user can draw a image and it would generate a chromatic aberration for this image.
+As it's easy to blame every color issue on chromatic aberration I've prepared a [small in-browser demo](https://maciek-urbanski.github.io/valerion/rgb%20misalignment/chromatic_aberration.html), in which user can draw a image and it would generate a chromatic aberration for this image.
 
 So the diffrentiating factor between chromatic aberration and **light engine** issue is uniformness:
 - if color shift changes across the screen (with center having no color shift) it would be a chromatic aberration
