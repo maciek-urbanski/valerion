@@ -1,0 +1,860 @@
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RGB Plane Shift (Convolution Shift)</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body {
+      height: 100%; margin: 0; background: #0b0d10; color: #e8eef6;
+      font: 14px/1.3 system-ui, Segoe UI, Roboto, Arial; overflow: hidden;
+    }
+    #c {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; display: block;
+      background: #050607; cursor: grab;
+    }
+    #c:active { cursor: grabbing; }
+
+    .panel {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      width: 360px;
+
+      /* Reduced vertical footprint; scroll inside */
+      max-height: 56vh;
+      overflow: auto;
+
+      border: 1px solid #263042;
+      border-radius: 14px;
+      background: rgba(14, 17, 23, 0.92);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 14px 14px 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .panel.hidden { display: none; }
+
+    h1 { margin: 0; font-size: 16px; font-weight: 650; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+    .row > * { flex: 1; }
+    label { display: block; font-size: 12px; opacity: 0.85; margin-bottom: 4px; }
+
+    input[type="number"], select {
+      width: 100%; box-sizing: border-box; padding: 8px 10px;
+      border-radius: 10px; border: 1px solid #263042; background: #0b0f15; color: #e8eef6;
+      outline: none;
+    }
+    input[type="file"] { width: 100%; }
+
+    button {
+      padding: 9px 10px; border-radius: 12px; border: 1px solid #263042;
+      background: #121826; color: #e8eef6; cursor: pointer;
+    }
+    button:hover { background: #151d2d; }
+    button:active { transform: translateY(1px); }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border: 1px solid #263042; border-radius: 999px;
+      font-size: 12px; opacity: 0.9;
+    }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #0b0f15; border: 1px solid #263042; padding: 2px 6px; border-radius: 8px;
+    }
+    .muted { opacity: 0.75; }
+    .hr { height: 1px; background: #1e2430; margin: 12px 0; }
+    .warn { color: #ffd27a; }
+    .ok { color: #9ae6b4; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .small { font-size: 12px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    #menuHint {
+      position: fixed;
+      left: 12px;
+      top: 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid #263042;
+      background: rgba(14, 17, 23, 0.80);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      display: none;
+      user-select: none;
+      pointer-events: none;
+    }
+    #menuHint.show { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div id="menuHint" class="mono muted">
+    Menu hidden — press <span class="kbd">M</span> to show
+  </div>
+
+  <div id="panel" class="panel">
+    <div class="row" style="margin-top:0;">
+      <h1>RGB Plane Shift Calibrator</h1>
+      <div style="text-align:right;">
+        <span class="badge">Menu: <span class="kbd">M</span></span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Load image (4K OK)</label>
+        <input id="file" type="file" accept="image/*" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Shift method</label>
+        <select id="kernel">
+          <option value="conv2x2">Convolution shift (2×2, weights sum=1, reflect border)</option>
+          <option value="nearest">Nearest (debug)</option>
+        </select>
+      </div>
+      <div>
+        <label>Active channel</label>
+        <div class="badge" id="activeBadge">R</div>
+      </div>
+    </div>
+
+    <div class="two">
+      <div>
+        <label>Step (px)</label>
+        <input id="step" type="number" min="0" step="0.01" value="0.10" />
+      </div>
+      <div>
+        <label>Zoom</label>
+        <input id="zoom" type="number" min="0.01" step="0.1" value="1.00" />
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="two">
+      <div>
+        <label>Red shift X</label>
+        <input id="rx" type="number" step="0.01" value="0.00" />
+      </div>
+      <div>
+        <label>Red shift Y</label>
+        <input id="ry" type="number" step="0.01" value="0.00" />
+      </div>
+      <div>
+        <label>Blue shift X</label>
+        <input id="bx" type="number" step="0.01" value="0.00" />
+      </div>
+      <div>
+        <label>Blue shift Y</label>
+        <input id="by" type="number" step="0.01" value="0.00" />
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="reset">Reset shifts</button>
+      <button id="native">Native 1:1 (N)</button>
+      <button id="fit">Fit (F)</button>
+    </div>
+
+    <div class="row">
+      <button id="copy">Copy</button>
+      <button id="paste">Paste</button>
+      <button id="export">Export PNG</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="small">
+      <div class="muted">
+        <div><span class="kbd">M</span> toggle menu overlay</div>
+        <div class="hr"></div>
+        <div><span class="kbd">1</span>/<span class="kbd">2</span> select <b>R</b>/<b>B</b></div>
+        <div><span class="kbd">←</span><span class="kbd">→</span><span class="kbd">↑</span><span class="kbd">↓</span> nudge active channel</div>
+        <div><span class="kbd">Shift</span> ×10 step, <span class="kbd">Alt</span> ÷10 step</div>
+        <div><span class="kbd">[</span>/<span class="kbd">]</span> decrease/increase step</div>
+        <div><span class="kbd">R</span>/<span class="kbd">B</span> reset one channel, <span class="kbd">0</span> reset all</div>
+        <div><span class="kbd">N</span> native, <span class="kbd">F</span> fit, <span class="kbd">+</span>/<span class="kbd">-</span> zoom</div>
+        <div class="hr"></div>
+        <div>Mouse: drag to pan, wheel to zoom around cursor.</div>
+      </div>
+      <div class="hr"></div>
+      <div id="status" class="mono muted">No image loaded.</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------- State ----------
+  const S = {
+    imgW: 0, imgH: 0,
+    shiftR: {x: 0, y: 0},
+    shiftB: {x: 0, y: 0},
+    active: 'R',
+    step: 0.10,
+    kernel: 'conv2x2',
+
+    viewMode: 'native', // 'native' | 'fit'
+    zoomFactor: 1.0,
+    panX: 0, panY: 0,   // device pixels, +Y down
+    dragging: false,
+    dragStart: {x: 0, y: 0},
+    panStart: {x: 0, y: 0},
+    dirty: true,
+  };
+
+  // ---------- UI ----------
+  const el = (id) => document.getElementById(id);
+  const canvas = el('c');
+  const status = el('status');
+  const activeBadge = el('activeBadge');
+  const panel = el('panel');
+  const menuHint = el('menuHint');
+
+  const ui = {
+    file: el('file'),
+    kernel: el('kernel'),
+    step: el('step'),
+    zoom: el('zoom'),
+    rx: el('rx'), ry: el('ry'),
+    bx: el('bx'), by: el('by'),
+    reset: el('reset'),
+    native: el('native'),
+    fit: el('fit'),
+    copy: el('copy'),
+    paste: el('paste'),
+    export: el('export'),
+  };
+
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function setStatus(msg, cls='muted') {
+    status.className = `mono ${cls}`;
+    status.textContent = msg;
+  }
+
+  function syncUIFromState() {
+    ui.kernel.value = S.kernel;
+    ui.step.value = S.step.toFixed(2);
+    ui.zoom.value = S.zoomFactor.toFixed(2);
+    ui.rx.value = S.shiftR.x.toFixed(2);
+    ui.ry.value = S.shiftR.y.toFixed(2);
+    ui.bx.value = S.shiftB.x.toFixed(2);
+    ui.by.value = S.shiftB.y.toFixed(2);
+    activeBadge.textContent = S.active;
+  }
+
+  function syncStateFromUI() {
+    S.kernel = ui.kernel.value;
+    S.step = clamp(parseFloat(ui.step.value || "0.1"), 0, 100);
+    S.zoomFactor = clamp(parseFloat(ui.zoom.value || "1.0"), 0.01, 100);
+    S.shiftR.x = parseFloat(ui.rx.value || "0");
+    S.shiftR.y = parseFloat(ui.ry.value || "0");
+    S.shiftB.x = parseFloat(ui.bx.value || "0");
+    S.shiftB.y = parseFloat(ui.by.value || "0");
+    S.dirty = true;
+  }
+
+  function isTypingTarget(t) {
+    if (!t) return false;
+    const tag = (t.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || t.isContentEditable;
+  }
+
+  function stepBump(dir) {
+    const ladder = [0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.25,0.5,1,2,5,10];
+    const cur = S.step;
+    let idx = ladder.findIndex(x => x >= cur - 1e-12);
+    if (idx < 0) idx = ladder.length - 1;
+    idx = clamp(idx + (dir > 0 ? 1 : -1), 0, ladder.length - 1);
+    S.step = ladder[idx];
+    ui.step.value = S.step.toFixed(3).replace(/0+$/,'').replace(/\.$/,'');
+  }
+
+  function setViewNative() {
+    S.viewMode = 'native';
+    S.zoomFactor = 1.0;
+    S.panX = 0; S.panY = 0;
+    ui.zoom.value = S.zoomFactor.toFixed(2);
+    S.dirty = true;
+  }
+
+  function setViewFit() {
+    S.viewMode = 'fit';
+    S.zoomFactor = 1.0;
+    S.panX = 0; S.panY = 0;
+    ui.zoom.value = S.zoomFactor.toFixed(2);
+    S.dirty = true;
+  }
+
+  function toggleMenu(force) {
+    const show = (force !== undefined) ? !!force : panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !show);
+    menuHint.classList.toggle('show', !show);
+  }
+
+  // ---------- WebGL2 ----------
+  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false });
+  if (!gl) {
+    alert('WebGL2 not available. Please use a modern browser.');
+    return;
+  }
+
+  let progConv = null;
+  let progNearest = null;
+  let vao = null;
+  let srcTex = null;
+
+  function compileShader(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(sh);
+      gl.deleteShader(sh);
+      throw new Error(log || 'Shader compile failed');
+    }
+    return sh;
+  }
+
+  function createProgram(vsSrc, fsSrc) {
+    const vs = compileShader(gl.VERTEX_SHADER, vsSrc);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+    const p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.linkProgram(p);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      const log = gl.getProgramInfoLog(p);
+      gl.deleteProgram(p);
+      throw new Error(log || 'Program link failed');
+    }
+    return p;
+  }
+
+  const VS = `#version 300 es
+    precision highp float;
+    layout(location=0) in vec2 a_pos;
+    void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+  `;
+
+  // Notes:
+  // - We draw the image into the canvas with TOP-LEFT origin mapping (frag y is flipped).
+  // - We upload with UNPACK_FLIP_Y_WEBGL=1 so texelFetch(x,y) corresponds to original image (x,y) with y down.
+  // - The shift is implemented as a *2×2 convolution* (bilinear kernel) around p+shift.
+  // - Border handling matches OpenCV BORDER_REFLECT ("fedcba|abcdefgh|hgfedcb") via reflectIndex().
+  const FS_PREAMBLE = `#version 300 es
+    precision highp float;
+    precision highp int;
+
+    uniform sampler2D u_img;
+    uniform ivec2 u_imgSizeI;   // (W,H) ints
+    uniform vec2  u_canvasSize; // (W,H) device px
+    uniform vec2  u_rectOrigin; // image top-left in canvas device px
+    uniform float u_scale;      // device_px / image_px
+    uniform vec2  u_shiftR;     // in image pixels
+    uniform vec2  u_shiftB;     // in image pixels
+
+    out vec4 outColor;
+
+    int reflectIndex(int i, int n) {
+      // OpenCV BORDER_REFLECT: ... 2 1 0 | 0 1 2 3 ... n-1 | n-1 n-2 ...
+      if (n <= 1) return 0;
+      int period = 2 * n;
+      int m = i % period;
+      if (m < 0) m += period;
+      if (m >= n) m = period - m - 1;
+      return m;
+    }
+
+    vec4 fetchReflect(ivec2 p) {
+      int x = reflectIndex(p.x, u_imgSizeI.x);
+      int y = reflectIndex(p.y, u_imgSizeI.y);
+      return texelFetch(u_img, ivec2(x,y), 0);
+    }
+
+    bool inImage(vec2 pCenter) {
+      return pCenter.x >= 0.0 && pCenter.y >= 0.0 &&
+             pCenter.x <= float(u_imgSizeI.x - 1) &&
+             pCenter.y <= float(u_imgSizeI.y - 1);
+    }
+
+    vec2 fragToImageCenterCoords() {
+      // Convert gl_FragCoord (bottom-left) -> top-left canvas coords
+      vec2 fragTL = vec2(gl_FragCoord.x, u_canvasSize.y - gl_FragCoord.y);
+      // Map to image "pixel center coords": 0..W-1, 0..H-1 (y down)
+      return (fragTL - u_rectOrigin) / u_scale - vec2(0.5);
+    }
+
+    vec4 sampleNearest(vec2 pCenter) {
+      ivec2 ip = ivec2(int(floor(pCenter.x + 0.5)), int(floor(pCenter.y + 0.5)));
+      return fetchReflect(ip);
+    }
+
+    vec4 sampleConv2x2(vec2 pCenter) {
+      // 2×2 bilinear convolution kernel (weights sum to 1)
+      vec2 base = floor(pCenter);
+      vec2 f = pCenter - base;
+
+      ivec2 b = ivec2(int(base.x), int(base.y));
+
+      vec4 c00 = fetchReflect(b + ivec2(0,0));
+      vec4 c10 = fetchReflect(b + ivec2(1,0));
+      vec4 c01 = fetchReflect(b + ivec2(0,1));
+      vec4 c11 = fetchReflect(b + ivec2(1,1));
+
+      float wx0 = 1.0 - f.x;
+      float wx1 = f.x;
+      float wy0 = 1.0 - f.y;
+      float wy1 = f.y;
+
+      // weights sum to 1: (wx0+wx1)*(wy0+wy1)=1
+      return c00 * (wx0*wy0) +
+             c10 * (wx1*wy0) +
+             c01 * (wx0*wy1) +
+             c11 * (wx1*wy1);
+    }
+  `;
+
+  const FS_CONV = FS_PREAMBLE + `
+    void main() {
+      vec2 p = fragToImageCenterCoords();
+
+      // Do not draw outside the image rectangle
+      if (!inImage(p)) { outColor = vec4(0.0,0.0,0.0,1.0); return; }
+
+      // Green is reference (no shift)
+      vec4 g = sampleConv2x2(p);
+
+      // Shift R/B via convolution around p + shift
+      vec4 r = sampleConv2x2(p + u_shiftR);
+      vec4 b = sampleConv2x2(p + u_shiftB);
+
+      outColor = vec4(r.r, g.g, b.b, 1.0);
+    }
+  `;
+
+  const FS_NEAREST = FS_PREAMBLE + `
+    void main() {
+      vec2 p = fragToImageCenterCoords();
+      if (!inImage(p)) { outColor = vec4(0.0,0.0,0.0,1.0); return; }
+      vec4 g = sampleNearest(p);
+      vec4 r = sampleNearest(p + u_shiftR);
+      vec4 b = sampleNearest(p + u_shiftB);
+      outColor = vec4(r.r, g.g, b.b, 1.0);
+    }
+  `;
+
+  function initGL() {
+    progConv = createProgram(VS, FS_CONV);
+    progNearest = createProgram(VS, FS_NEAREST);
+
+    vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1,-1,  +1,-1,  -1,+1,
+      -1,+1,  +1,-1,  +1,+1
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.bindVertexArray(null);
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+
+    // Critical for top-left texelFetch coords matching the input image:
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+  }
+
+  try { initGL(); }
+  catch (e) {
+    setStatus('WebGL shader error: ' + (e.message || e), 'warn');
+    return;
+  }
+
+  function createTextureFromImageBitmap(bmp) {
+    if (srcTex) gl.deleteTexture(srcTex);
+    srcTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, srcTex);
+
+    // Always NEAREST; all filtering is explicitly controlled in shader.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  // ---------- View mapping ----------
+  function resizeCanvasToDisplaySize() {
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const w = Math.max(2, Math.floor(window.innerWidth * dpr));
+    const h = Math.max(2, Math.floor(window.innerHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+      S.dirty = true;
+    }
+  }
+
+  function baseScale() {
+    if (!S.imgW || !S.imgH) return 1;
+    if (S.viewMode === 'fit') {
+      return Math.min(canvas.width / S.imgW, canvas.height / S.imgH);
+    }
+    return 1.0; // native: 1 image px == 1 device px
+  }
+
+  function computeScale() {
+    return baseScale() * S.zoomFactor;
+  }
+
+  function computeRectOriginAndScale() {
+    const scale = computeScale();
+    const imgDrawW = S.imgW * scale;
+    const imgDrawH = S.imgH * scale;
+    const originX = (canvas.width  - imgDrawW) * 0.5 + S.panX;
+    const originY = (canvas.height - imgDrawH) * 0.5 + S.panY;
+    return { originX, originY, scale };
+  }
+
+  function programForKernel() {
+    return (S.kernel === 'nearest') ? progNearest : progConv;
+  }
+
+  function setUniforms(prog, originX, originY, scale) {
+    gl.useProgram(prog);
+    const loc = (name) => gl.getUniformLocation(prog, name);
+
+    gl.uniform2f(loc('u_canvasSize'), canvas.width, canvas.height);
+    gl.uniform2f(loc('u_rectOrigin'), originX, originY);
+    gl.uniform1f(loc('u_scale'), scale);
+
+    gl.uniform2f(loc('u_shiftR'), S.shiftR.x, S.shiftR.y);
+    gl.uniform2f(loc('u_shiftB'), S.shiftB.x, S.shiftB.y);
+
+    gl.uniform2i(loc('u_imgSizeI'), S.imgW, S.imgH);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, srcTex);
+    gl.uniform1i(loc('u_img'), 0);
+  }
+
+  // ---------- Render ----------
+  function draw() {
+    if (!srcTex || !S.imgW || !S.imgH) return;
+    resizeCanvasToDisplaySize();
+
+    const { originX, originY, scale } = computeRectOriginAndScale();
+    const prog = programForKernel();
+
+    gl.bindVertexArray(vao);
+    setUniforms(prog, originX, originY, scale);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.bindVertexArray(null);
+  }
+
+  function raf() {
+    if (S.dirty) {
+      S.dirty = false;
+      draw();
+    }
+    requestAnimationFrame(raf);
+  }
+  requestAnimationFrame(raf);
+
+  // ---------- Image Loading ----------
+  ui.file.addEventListener('change', async () => {
+    const f = ui.file.files && ui.file.files[0];
+    if (!f) return;
+    try {
+      setStatus('Decoding image…', 'muted');
+      const bmp = await createImageBitmap(f);
+      S.imgW = bmp.width;
+      S.imgH = bmp.height;
+      createTextureFromImageBitmap(bmp);
+
+      setViewNative();
+      setStatus(`Loaded ${S.imgW}×${S.imgH}. Convolution shift enabled (weights sum=1, reflect border).`, 'ok');
+      S.dirty = true;
+    } catch (e) {
+      setStatus('Failed to load image: ' + (e.message || e), 'warn');
+    }
+  });
+
+  // ---------- UI bindings ----------
+  ['kernel','step','zoom','rx','ry','bx','by'].forEach(id => {
+    ui[id].addEventListener('input', () => {
+      syncStateFromUI();
+      syncUIFromState();
+    });
+  });
+
+  ui.reset.addEventListener('click', () => {
+    S.shiftR.x = S.shiftR.y = 0;
+    S.shiftB.x = S.shiftB.y = 0;
+    syncUIFromState();
+    S.dirty = true;
+  });
+
+  ui.native.addEventListener('click', () => { setViewNative(); syncUIFromState(); });
+  ui.fit.addEventListener('click', () => { setViewFit(); syncUIFromState(); });
+
+  ui.copy.addEventListener('click', async () => {
+    const payload = {
+      kernel: S.kernel,
+      step: S.step,
+      shiftR: {...S.shiftR},
+      shiftB: {...S.shiftB},
+      viewMode: S.viewMode,
+      zoom: S.zoomFactor
+    };
+    const txt = JSON.stringify(payload, null, 2);
+    try { await navigator.clipboard.writeText(txt); setStatus('Settings copied.', 'ok'); }
+    catch { prompt('Copy settings JSON:', txt); }
+  });
+
+  ui.paste.addEventListener('click', async () => {
+    let txt = '';
+    try { txt = await navigator.clipboard.readText(); }
+    catch { txt = prompt('Paste settings JSON:','') || ''; }
+    if (!txt.trim()) return;
+    try {
+      const obj = JSON.parse(txt);
+      if (obj.kernel) S.kernel = obj.kernel;
+      if (typeof obj.step === 'number') S.step = obj.step;
+      if (obj.shiftR) { S.shiftR.x = +obj.shiftR.x || 0; S.shiftR.y = +obj.shiftR.y || 0; }
+      if (obj.shiftB) { S.shiftB.x = +obj.shiftB.x || 0; S.shiftB.y = +obj.shiftB.y || 0; }
+      if (obj.viewMode === 'fit' || obj.viewMode === 'native') S.viewMode = obj.viewMode;
+      if (typeof obj.zoom === 'number') S.zoomFactor = clamp(obj.zoom, 0.01, 100);
+      syncUIFromState();
+      S.dirty = true;
+      setStatus('Settings applied.', 'ok');
+    } catch (e) {
+      setStatus('Invalid JSON: ' + (e.message || e), 'warn');
+    }
+  });
+
+  // ---------- Keyboard ----------
+  window.addEventListener('keydown', (ev) => {
+    if (isTypingTarget(ev.target)) return;
+
+    const key = ev.key;
+    let handled = false;
+
+    if (key === 'm' || key === 'M') { toggleMenu(); handled = true; }
+
+    if (!S.imgW || !S.imgH) {
+      if (handled) ev.preventDefault();
+      return;
+    }
+
+    if (key === '1') { S.active = 'R'; handled = true; }
+    else if (key === '2') { S.active = 'B'; handled = true; }
+    else if (key === 'r' || key === 'R') { S.shiftR.x = 0; S.shiftR.y = 0; handled = true; }
+    else if (key === 'b' || key === 'B') { S.shiftB.x = 0; S.shiftB.y = 0; handled = true; }
+    else if (key === '0') { S.shiftR.x=S.shiftR.y=S.shiftB.x=S.shiftB.y=0; handled = true; }
+    else if (key === '[') { stepBump(-1); handled = true; }
+    else if (key === ']') { stepBump(+1); handled = true; }
+    else if (key === 'f' || key === 'F') { setViewFit(); handled = true; }
+    else if (key === 'n' || key === 'N') { setViewNative(); handled = true; }
+    else if (key === '+' || key === '=') { S.zoomFactor = clamp(S.zoomFactor * 1.1, 0.01, 100); handled = true; }
+    else if (key === '-' || key === '_') { S.zoomFactor = clamp(S.zoomFactor / 1.1, 0.01, 100); handled = true; }
+
+    const stepBase = S.step;
+    let step = stepBase;
+    if (ev.shiftKey) step *= 10.0;
+    if (ev.altKey) step /= 10.0;
+
+    function applyNudge(dx, dy) {
+      if (S.active === 'R') { S.shiftR.x += dx; S.shiftR.y += dy; }
+      else { S.shiftB.x += dx; S.shiftB.y += dy; }
+    }
+
+    if (key === 'ArrowLeft') { applyNudge(-step, 0); handled = true; }
+    else if (key === 'ArrowRight') { applyNudge(+step, 0); handled = true; }
+    else if (key === 'ArrowUp') { applyNudge(0, -step); handled = true; }
+    else if (key === 'ArrowDown') { applyNudge(0, +step); handled = true; }
+
+    if (handled) {
+      ev.preventDefault();
+      syncUIFromState();
+      S.dirty = true;
+    }
+  }, { passive: false });
+
+  // ---------- Mouse pan/zoom ----------
+  canvas.addEventListener('mousedown', (ev) => {
+    if (!S.imgW || !S.imgH) return;
+    S.dragging = true;
+    S.dragStart.x = ev.clientX;
+    S.dragStart.y = ev.clientY;
+    S.panStart.x = S.panX;
+    S.panStart.y = S.panY;
+  });
+
+  window.addEventListener('mouseup', () => { S.dragging = false; });
+
+  window.addEventListener('mousemove', (ev) => {
+    if (!S.dragging) return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const dx = (ev.clientX - S.dragStart.x) * dpr;
+    const dy = (ev.clientY - S.dragStart.y) * dpr;
+    S.panX = S.panStart.x + dx;
+    S.panY = S.panStart.y + dy;
+    S.dirty = true;
+  });
+
+  canvas.addEventListener('wheel', (ev) => {
+    if (!S.imgW || !S.imgH) return;
+    ev.preventDefault();
+
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    const cx = (ev.clientX - rect.left) * dpr;
+    const cy = (ev.clientY - rect.top) * dpr;
+
+    const { originX: oX, originY: oY, scale: oldScale } = computeRectOriginAndScale();
+
+    const zoomMul = Math.exp(-ev.deltaY * 0.0015);
+    const newZoom = clamp(S.zoomFactor * zoomMul, 0.05, 50.0);
+
+    const pImg = { x: (cx - oX) / oldScale, y: (cy - oY) / oldScale };
+
+    S.zoomFactor = newZoom;
+    ui.zoom.value = S.zoomFactor.toFixed(2);
+
+    const { originX: nX, originY: nY, scale: newScale } = computeRectOriginAndScale();
+
+    const desiredNX = cx - pImg.x * newScale;
+    const desiredNY = cy - pImg.y * newScale;
+
+    S.panX += (desiredNX - nX);
+    S.panY += (desiredNY - nY);
+
+    S.dirty = true;
+  }, { passive: false });
+
+  // ---------- Export PNG (full resolution) ----------
+  function createFBOTexture(w, h) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    return t;
+  }
+
+  function createFBO(tex) {
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!ok) throw new Error('Framebuffer incomplete');
+    return fb;
+  }
+
+  ui.export.addEventListener('click', async () => {
+    if (!S.imgW || !S.imgH || !srcTex) return;
+
+    const w = S.imgW, h = S.imgH;
+    const prog = programForKernel();
+
+    setStatus(`Exporting ${w}×${h} PNG (${S.kernel})…`, 'muted');
+
+    const tex = createFBOTexture(w, h);
+    const fb = createFBO(tex);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.viewport(0, 0, w, h);
+    gl.bindVertexArray(vao);
+
+    // Full-res render: origin=(0,0), scale=1
+    gl.useProgram(prog);
+    const loc = (name) => gl.getUniformLocation(prog, name);
+    gl.uniform2f(loc('u_canvasSize'), w, h);
+    gl.uniform2f(loc('u_rectOrigin'), 0, 0);
+    gl.uniform1f(loc('u_scale'), 1.0);
+    gl.uniform2f(loc('u_shiftR'), S.shiftR.x, S.shiftR.y);
+    gl.uniform2f(loc('u_shiftB'), S.shiftB.x, S.shiftB.y);
+    gl.uniform2i(loc('u_imgSizeI'), w, h);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, srcTex);
+    gl.uniform1i(loc('u_img'), 0);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    const pixels = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+    gl.bindVertexArray(null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // Restore viewport
+    resizeCanvasToDisplaySize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
+    gl.deleteFramebuffer(fb);
+    gl.deleteTexture(tex);
+
+    // readPixels is bottom-up; flip for PNG
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const ctx = out.getContext('2d');
+
+    const imgData = ctx.createImageData(w, h);
+    const rowBytes = w * 4;
+    for (let y = 0; y < h; y++) {
+      const srcOff = (h - 1 - y) * rowBytes;
+      const dstOff = y * rowBytes;
+      imgData.data.set(pixels.subarray(srcOff, srcOff + rowBytes), dstOff);
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const blob = await new Promise(res => out.toBlob(res, 'image/png'));
+    if (!blob) { setStatus('Export failed (PNG blob creation).', 'warn'); return; }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `corrected_${S.kernel}_R(${S.shiftR.x.toFixed(2)},${S.shiftR.y.toFixed(2)})_B(${S.shiftB.x.toFixed(2)},${S.shiftB.y.toFixed(2)}).png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    setStatus('Export complete.', 'ok');
+    S.dirty = true;
+  });
+
+  // ---------- Resize ----------
+  window.addEventListener('resize', () => { S.dirty = true; });
+
+  // Initial
+  syncUIFromState();
+  toggleMenu(true);
+  setStatus('Load an image to begin. Press M to toggle menu.', 'muted');
+})();
+</script>
+</body>
+</html>
+```
