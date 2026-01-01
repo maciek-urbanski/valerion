@@ -21,7 +21,7 @@ If projector has 1 panels, its **light engine** needs to produce 1 light beam sh
 For simplifaction I'm ingnoring color wheels and lamps, LEDs, and hybrid light sources.
 
 ## nature of the issue
-Velerion projectors are 1 panel projector using micromirrors (DLP/DMD) with 3 laser sources in its **light engine**.
+Velerion projectors are 1 panel projector using micromirrors ([DLP/DMD](https://en.wikipedia.org/wiki/Digital_micromirror_device)) with 3 laser sources in its **light engine**.
 
 So at the beginning we can cross-out CRT misaligment (duh!) and panel misalignment (theres only 1 panel).
 
@@ -42,7 +42,7 @@ So the diffrentiating factor between chromatic aberration and **light engine** i
 - if color shift is uniform across the screen - it would be **light engine** issue
 
 # analysis
-To determin the issue I've designed a [test plate](test_plate.png) that displays a pattern of cells, each cell having 2 parts:
+To determin the issue I've designed a [test plate](https://maciek-urbanski.github.io/valerion/rgb%20misalignment/test_plate.png) that displays a pattern of cells, each cell having 2 parts:
 - center with ArUco marker that encodes cell position in image (see OpenCV documentiation [here](https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html))
 - border with spots that allow for calculating shifts between R-G and B-G color planes using normalized cross correlation
 
@@ -83,5 +83,9 @@ For me red shift of [0.07, -0.30] and blue shift of [-0.12, 0.39] changed imag f
 ...to this:  
 ![after](after.jpg)
 
+### AI use
+All of the code above was developed with AI in a loop. Human designed & tested it, AIdid the implementation.  
+On a personal note, it's like a having a quite competent development team at my fingertips.
+
 ### next steps
-If you have problem replicating - uoi can contact me at maciek0urbanski@gmail.com .
+If you have problem replicating - you can contact me at maciek0urbanski@gmail.com .
