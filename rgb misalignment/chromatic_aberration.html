@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chromatic Aberration — Paint an Image, See It Through a Lens</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#0f1731;
+      --text:#e8ecff;
+      --muted:#aab5e6;
+      --stroke:rgba(255,255,255,.16);
+      --stroke2:rgba(255,255,255,.10);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--text);
+      background:radial-gradient(1200px 700px at 15% 10%, #17204a 0%, var(--bg) 60%);
+    }
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:20px 16px 26px;
+      display:grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap:14px;
+    }
+    header{
+      grid-column:1 / -1;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      padding:14px 14px 12px;
+    }
+    header h1{
+      margin:0 0 6px;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    header p{ margin:0; color:var(--muted); line-height:1.5; }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      overflow:hidden;
+    }
+
+    .stage{ padding:12px; }
+
+    .io{
+      display:grid;
+      grid-template-columns: 1fr 64px 1fr;
+      gap:12px;
+      align-items:stretch;
+    }
+
+    .pane{
+      background:linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.22));
+      border:1px solid var(--stroke2);
+      border-radius:12px;
+      padding:10px;
+      position:relative;
+      overflow:hidden;
+    }
+    .pane h2{
+      margin:0 0 8px;
+      font-size:13px;
+      letter-spacing:.2px;
+      color:#d9e2ff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .sub{
+      font-size:11px;
+      color:var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    canvas{
+      width:100%;
+      aspect-ratio: 1 / 1;
+      display:block;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      touch-action:none;
+    }
+
+    .lensMid{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    .lensBadge{
+      width:64px;
+      height:64px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.20));
+      position:relative;
+      overflow:hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .lensBadge:before{
+      content:"";
+      position:absolute;
+      inset:10px 18px;
+      border-radius:999px;
+      background:rgba(120,170,255,.22);
+      border:2px solid rgba(180,210,255,.30);
+    }
+    .lensBadge:after{
+      content:"";
+      position:absolute;
+      left:0; right:0;
+      top:50%;
+      height:1px;
+      background:rgba(255,255,255,.18);
+      transform:translateY(-.5px);
+    }
+    .arrow{
+      font-size:12px;
+      color:rgba(232,236,255,.85);
+      letter-spacing:.2px;
+    }
+
+    .controls{ padding:12px; }
+    .controls h2{
+      margin:0 0 10px;
+      font-size:14px;
+      letter-spacing:.2px;
+      color:#d9e2ff;
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      padding:8px 0;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .row:first-of-type{ border-top:none; }
+    label{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    input[type="range"]{ width:100%; }
+    input[type="color"]{ width:100%; height:34px; padding:0; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:transparent; }
+    .val{
+      font-variant-numeric: tabular-nums;
+      color:#e8ecff;
+      font-size:12px;
+      align-self:end;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
+      min-width:112px;
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .btnRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      padding-top:8px;
+    }
+    button{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(0,0,0,.18);
+      color:rgba(232,236,255,.92);
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:12px;
+      letter-spacing:.15px;
+    }
+    button:hover{ background:rgba(0,0,0,.28); }
+    button:active{ transform: translateY(1px); }
+    button.primary{ border-color: rgba(122,167,255,.40); box-shadow: 0 0 0 1px rgba(122,167,255,.12) inset; }
+    button.toggled{ background:rgba(122,167,255,.18); border-color: rgba(122,167,255,.45); }
+
+    .notes{
+      padding:12px;
+      color:var(--muted);
+      line-height:1.55;
+      font-size:12.5px;
+    }
+    .notes b{ color:var(--text); }
+    .kbd{
+      display:inline-block;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.22);
+      padding:2px 7px;
+      border-radius:7px;
+      font-size:11px;
+      color:#e8ecff;
+      font-variant-numeric: tabular-nums;
+      white-space:nowrap;
+    }
+
+    @media (max-width: 1020px){
+      .wrap{ grid-template-columns: 1fr; }
+      .io{ grid-template-columns: 1fr; }
+      .lensMid{ display:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Chromatic Aberration — Paint an Image, See It Through a Lens</h1>
+      <p>
+        This visualizes <b>lateral chromatic aberration</b>: off the optical axis, magnification becomes wavelength-dependent, so colors no longer coincide.
+        In this simplified model, red/blue channels are displaced in opposite radial directions by an amount that grows with distance from the <b>optical axis</b>.
+      </p>
+    </header>
+
+    <section class="card stage">
+      <div class="io">
+        <div class="pane">
+          <h2>
+            Object / drawing (before lens)
+            <span class="sub" id="readout">r: — px · shift: — px</span>
+          </h2>
+          <canvas id="in" aria-label="Input drawing canvas" role="img"></canvas>
+        </div>
+
+        <div class="lensMid" aria-hidden="true">
+          <div class="lensBadge" title="Lens"></div>
+          <div class="arrow">through lens</div>
+        </div>
+
+        <div class="pane">
+          <h2>
+            Image plane (after lens)
+            <span class="sub" id="modeBadge">mode: paint</span>
+          </h2>
+          <canvas id="out" aria-label="Output image with chromatic aberration" role="img"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="card controls">
+      <h2>Controls</h2>
+
+      <div class="row">
+        <label>
+          Brush size
+          <input id="brush" type="range" min="2" max="60" step="1" value="14" />
+        </label>
+        <div class="val" id="brushVal">14 px</div>
+      </div>
+
+      <div class="row">
+        <label>
+          Brush color
+          <input id="color" type="color" value="#ffffff" />
+        </label>
+        <div class="val" id="colorVal">#ffffff</div>
+      </div>
+
+      <div class="row">
+        <label>
+          Max channel shift at edge
+          <input id="maxShift" type="range" min="0" max="26" step="0.2" value="10" />
+        </label>
+        <div class="val" id="maxShiftVal">10.0 px</div>
+      </div>
+
+      <div class="row">
+        <label>
+          Off-axis growth (power)
+          <input id="power" type="range" min="0.8" max="3.6" step="0.05" value="1.9" />
+        </label>
+        <div class="val" id="powerVal">1.90</div>
+      </div>
+
+      <div class="row">
+        <label>
+          Blur (simulated defocus)
+          <input id="blur" type="range" min="0" max="6" step="0.1" value="0.8" />
+        </label>
+        <div class="val" id="blurVal">0.8 px</div>
+      </div>
+
+      <div class="row">
+        <label>
+          Guides
+          <input id="guides" type="range" min="0" max="2" step="1" value="2" />
+        </label>
+        <div class="val" id="guidesVal">axis + rings</div>
+      </div>
+
+      <div class="btnRow">
+        <button id="btnEraser">Eraser</button>
+        <button id="btnMoveAxis">Move optical axis</button>
+        <button class="primary" id="btnExample">Draw example</button>
+        <button id="btnClear">Clear</button>
+        <button id="btnCenterAxis">Center axis</button>
+      </div>
+    </section>
+
+    <section class="card notes">
+      <b>What to demonstrate</b>
+      <div style="margin-top:8px;">
+        1) Draw a sharp edge (e.g., black/white boundary) near the center — fringing is small.
+        <br />
+        2) Draw the same edge near the corners — fringing increases because the point is farther from the <b>optical axis</b>.
+        <br />
+        3) Toggle <span class="kbd">Move optical axis</span> to shift the axis and show that “off-center” is relative to the optical axis location.
+      </div>
+      <div style="margin-top:10px;">
+        <b>Model</b>: red and blue channels are sampled from slightly different positions along the radial direction.
+        Shift magnitude = <span class="kbd">maxShift × (r / rMax)<sup>power</sup></span>. Green stays centered.
+      </div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const inCanvas = document.getElementById('in');
+  const outCanvas = document.getElementById('out');
+  const inCtx = inCanvas.getContext('2d');
+  const outCtx = outCanvas.getContext('2d');
+
+  // Authoritative drawing surface (NO guides / NO overlays). This avoids cumulative resampling
+  // and prevents guides from being baked into the drawing.
+  const paintCanvas = document.createElement('canvas');
+  const paintCtx = paintCanvas.getContext('2d');
+
+  const ui = {
+    brush: document.getElementById('brush'),
+    color: document.getElementById('color'),
+    maxShift: document.getElementById('maxShift'),
+    power: document.getElementById('power'),
+    blur: document.getElementById('blur'),
+    guides: document.getElementById('guides'),
+
+    brushVal: document.getElementById('brushVal'),
+    colorVal: document.getElementById('colorVal'),
+    maxShiftVal: document.getElementById('maxShiftVal'),
+    powerVal: document.getElementById('powerVal'),
+    blurVal: document.getElementById('blurVal'),
+    guidesVal: document.getElementById('guidesVal'),
+
+    btnEraser: document.getElementById('btnEraser'),
+    btnMoveAxis: document.getElementById('btnMoveAxis'),
+    btnExample: document.getElementById('btnExample'),
+    btnClear: document.getElementById('btnClear'),
+    btnCenterAxis: document.getElementById('btnCenterAxis'),
+
+    readout: document.getElementById('readout'),
+    modeBadge: document.getElementById('modeBadge'),
+  };
+
+  const state = {
+    w: 0,
+    h: 0,
+
+    brush: 14,
+    color: '#ffffff',
+    eraser: false,
+
+    maxShift: 10,
+    power: 1.9,
+    blur: 0.8,
+    guides: 2,
+
+    axisX: NaN,
+    axisY: NaN,
+
+    mode: 'paint', // 'paint' | 'axis'
+
+    drawing: false,
+    lastX: 0,
+    lastY: 0,
+
+    dirty: true,
+    rafPending: false,
+  };
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function cssSize(canvas){
+    const rect = canvas.getBoundingClientRect();
+    return { w: Math.max(1, Math.floor(rect.width)), h: Math.max(1, Math.floor(rect.height)) };
+  }
+
+  function resize(){
+    const s = cssSize(inCanvas);
+    const prev = (state.w > 0 && state.h > 0) ? snapshotPaint() : null;
+
+    state.w = s.w;
+    state.h = s.h;
+
+    // Keep canvas internal resolution equal to CSS pixels.
+    // This avoids getImageData/putImageData partial updates on HiDPI.
+    for(const c of [inCanvas, outCanvas, paintCanvas]){
+      c.width = state.w;
+      c.height = state.h;
+      const ctx = c.getContext('2d');
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+
+    // Restore paint buffer if we had one
+    if(prev){
+      paintCtx.clearRect(0,0,state.w,state.h);
+      paintCtx.drawImage(prev, 0, 0, state.w, state.h);
+    } else {
+      paintCtx.clearRect(0,0,state.w,state.h);
+    }
+
+    // Initialize or clamp optical axis
+    if(!Number.isFinite(state.axisX) || !Number.isFinite(state.axisY)){
+      state.axisX = state.w/2;
+      state.axisY = state.h/2;
+    } else {
+      state.axisX = clamp(state.axisX, 0, state.w);
+      state.axisY = clamp(state.axisY, 0, state.h);
+    }
+
+    requestProcess();
+  }
+
+  function snapshotPaint(){
+    const tmp = document.createElement('canvas');
+    tmp.width = state.w;
+    tmp.height = state.h;
+    tmp.getContext('2d').drawImage(paintCanvas, 0, 0);
+    return tmp;
+  }
+
+  function drawGuides(ctx){
+    if(state.guides === 0) return;
+
+    ctx.save();
+
+    // Axis crosshair
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6,6]);
+    ctx.beginPath();
+    ctx.moveTo(0, state.axisY);
+    ctx.lineTo(state.w, state.axisY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(state.axisX, 0);
+    ctx.lineTo(state.axisX, state.h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(232,236,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(state.axisX, state.axisY, 3.5, 0, Math.PI*2);
+    ctx.fill();
+
+    if(state.guides >= 2){
+      // Rings
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      const maxR = Math.hypot(
+        Math.max(state.axisX, state.w - state.axisX),
+        Math.max(state.axisY, state.h - state.axisY)
+      );
+      for(const f of [0.25, 0.5, 0.75, 1.0]){
+        ctx.beginPath();
+        ctx.arc(state.axisX, state.axisY, maxR*f, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function roundRectPath(ctx, x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  function drawOverlayForMode(ctx){
+    if(state.mode !== 'axis') return;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(122,167,255,0.08)';
+    ctx.fillRect(0,0,state.w,state.h);
+
+    const text = 'Drag to move optical axis';
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    const pad = 10;
+    const metrics = ctx.measureText(text);
+    const bw = metrics.width + pad*2;
+    const bh = 28;
+    const bx = 10;
+    const by = 10;
+    roundRectPath(ctx, bx, by, bw, bh, 10);
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(122,167,255,0.35)';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(232,236,255,0.92)';
+    ctx.fillText(text, bx+pad, by+18);
+
+    ctx.restore();
+  }
+
+  function setReadoutFrom(x,y){
+    if(x == null || y == null){
+      ui.readout.textContent = 'r: — px · shift: — px';
+      return;
+    }
+    const dx = x - state.axisX;
+    const dy = y - state.axisY;
+    const r = Math.hypot(dx,dy);
+    const maxR = Math.hypot(
+      Math.max(state.axisX, state.w - state.axisX),
+      Math.max(state.axisY, state.h - state.axisY)
+    );
+    const t = maxR > 1e-6 ? clamp(r / maxR, 0, 1) : 0;
+    const shift = state.maxShift * Math.pow(t, state.power);
+    ui.readout.textContent = `r: ${r.toFixed(1)} px · shift: ${shift.toFixed(2)} px`;
+  }
+
+  function requestProcess(){
+    state.dirty = true;
+    if(state.rafPending) return;
+    state.rafPending = true;
+    requestAnimationFrame(() => {
+      state.rafPending = false;
+      if(state.dirty) applyChromaticAberration();
+    });
+  }
+
+  function bilinearSample(data, w, h, x, y){
+    const x0 = clamp(Math.floor(x), 0, w-1);
+    const y0 = clamp(Math.floor(y), 0, h-1);
+    const x1 = clamp(x0 + 1, 0, w-1);
+    const y1 = clamp(y0 + 1, 0, h-1);
+
+    const fx = clamp(x - x0, 0, 1);
+    const fy = clamp(y - y0, 0, 1);
+
+    const i00 = (y0*w + x0) * 4;
+    const i10 = (y0*w + x1) * 4;
+    const i01 = (y1*w + x0) * 4;
+    const i11 = (y1*w + x1) * 4;
+
+    const out = [0,0,0,0];
+    for(let c=0;c<4;c++){
+      const v00 = data[i00+c];
+      const v10 = data[i10+c];
+      const v01 = data[i01+c];
+      const v11 = data[i11+c];
+      const v0 = v00 + (v10 - v00)*fx;
+      const v1 = v01 + (v11 - v01)*fx;
+      out[c] = v0 + (v1 - v0)*fy;
+    }
+    return out;
+  }
+
+  function applyBlur(img, w, h, radiusPx){
+    const r = clamp(radiusPx, 0, 6);
+    if(r <= 0.01) return img;
+
+    const rad = Math.max(1, Math.round(r));
+    const tmp = new Uint8ClampedArray(img.length);
+
+    // Horizontal
+    for(let y=0;y<h;y++){
+      let sumR=0,sumG=0,sumB=0,sumA=0;
+      const row = y*w;
+      for(let k=-rad;k<=rad;k++){
+        const x = clamp(k, 0, w-1);
+        const i = (row + x) * 4;
+        sumR += img[i]; sumG += img[i+1]; sumB += img[i+2]; sumA += img[i+3];
+      }
+      const denom = (rad*2 + 1);
+      for(let x=0;x<w;x++){
+        const i = (row + x) * 4;
+        tmp[i]   = Math.round(sumR/denom);
+        tmp[i+1] = Math.round(sumG/denom);
+        tmp[i+2] = Math.round(sumB/denom);
+        tmp[i+3] = Math.round(sumA/denom);
+
+        const xRemove = clamp(x - rad, 0, w-1);
+        const xAdd = clamp(x + rad + 1, 0, w-1);
+        const iR = (row + xRemove) * 4;
+        const iA = (row + xAdd) * 4;
+        sumR += img[iA]   - img[iR];
+        sumG += img[iA+1] - img[iR+1];
+        sumB += img[iA+2] - img[iR+2];
+        sumA += img[iA+3] - img[iR+3];
+      }
+    }
+
+    // Vertical
+    const out = new Uint8ClampedArray(img.length);
+    for(let x=0;x<w;x++){
+      let sumR=0,sumG=0,sumB=0,sumA=0;
+      for(let k=-rad;k<=rad;k++){
+        const y = clamp(k, 0, h-1);
+        const i = (y*w + x) * 4;
+        sumR += tmp[i]; sumG += tmp[i+1]; sumB += tmp[i+2]; sumA += tmp[i+3];
+      }
+      const denom = (rad*2 + 1);
+      for(let y=0;y<h;y++){
+        const i = (y*w + x) * 4;
+        out[i]   = Math.round(sumR/denom);
+        out[i+1] = Math.round(sumG/denom);
+        out[i+2] = Math.round(sumB/denom);
+        out[i+3] = Math.round(sumA/denom);
+
+        const yRemove = clamp(y - rad, 0, h-1);
+        const yAdd = clamp(y + rad + 1, 0, h-1);
+        const iR = (yRemove*w + x) * 4;
+        const iA = (yAdd*w + x) * 4;
+        sumR += tmp[iA]   - tmp[iR];
+        sumG += tmp[iA+1] - tmp[iR+1];
+        sumB += tmp[iA+2] - tmp[iR+2];
+        sumA += tmp[iA+3] - tmp[iR+3];
+      }
+    }
+
+    return out;
+  }
+
+  function redrawInputDisplay(){
+    inCtx.clearRect(0,0,state.w,state.h);
+    inCtx.drawImage(paintCanvas, 0, 0);
+    drawGuides(inCtx);
+    drawOverlayForMode(inCtx);
+  }
+
+  function applyChromaticAberration(){
+    state.dirty = false;
+
+    redrawInputDisplay();
+
+    const w = state.w, h = state.h;
+    const img = paintCtx.getImageData(0,0,w,h);
+    let src = img.data;
+
+    if(state.blur > 0.01){
+      src = applyBlur(src, w, h, state.blur);
+    }
+
+    const out = outCtx.createImageData(w, h);
+    const dst = out.data;
+
+    const maxR = Math.hypot(
+      Math.max(state.axisX, w - state.axisX),
+      Math.max(state.axisY, h - state.axisY)
+    );
+
+    for(let y=0; y<h; y++){
+      for(let x=0; x<w; x++){
+        const dx = x - state.axisX;
+        const dy = y - state.axisY;
+        const r = Math.hypot(dx, dy);
+        const t = maxR > 1e-6 ? clamp(r / maxR, 0, 1) : 0;
+        const shift = state.maxShift * Math.pow(t, state.power);
+
+        let ux = 0, uy = 0;
+        if(r > 1e-6){ ux = dx / r; uy = dy / r; }
+
+        // Red displaced outward, blue inward.
+        const rx = x + ux * shift;
+        const ry = y + uy * shift;
+        const bx = x - ux * shift;
+        const by = y - uy * shift;
+
+        const sR = bilinearSample(src, w, h, rx, ry);
+        const sG = bilinearSample(src, w, h, x, y);
+        const sB = bilinearSample(src, w, h, bx, by);
+
+        const i = (y*w + x) * 4;
+        const a = clamp((sG[3] + 0.25*(sR[3] + sB[3]))/1.5, 0, 255);
+        dst[i]   = sR[0];
+        dst[i+1] = sG[1];
+        dst[i+2] = sB[2];
+        dst[i+3] = a;
+      }
+    }
+
+    outCtx.clearRect(0,0,w,h);
+    outCtx.putImageData(out, 0, 0);
+    drawGuides(outCtx);
+  }
+
+  function syncUI(){
+    ui.brushVal.textContent = `${state.brush} px`;
+    ui.colorVal.textContent = state.color.toLowerCase();
+    ui.maxShiftVal.textContent = `${state.maxShift.toFixed(1)} px`;
+    ui.powerVal.textContent = `${state.power.toFixed(2)}`;
+    ui.blurVal.textContent = `${state.blur.toFixed(1)} px`;
+    ui.guidesVal.textContent = state.guides === 0 ? 'off' : (state.guides === 1 ? 'axis' : 'axis + rings');
+
+    ui.btnEraser.classList.toggle('toggled', state.eraser);
+    ui.btnMoveAxis.classList.toggle('toggled', state.mode === 'axis');
+    ui.modeBadge.textContent = `mode: ${state.mode === 'paint' ? (state.eraser ? 'eraser' : 'paint') : 'move axis'}`;
+  }
+
+  function onUI(){
+    state.brush = parseInt(ui.brush.value, 10);
+    state.color = ui.color.value;
+    state.maxShift = parseFloat(ui.maxShift.value);
+    state.power = parseFloat(ui.power.value);
+    state.blur = parseFloat(ui.blur.value);
+    state.guides = parseInt(ui.guides.value, 10);
+    syncUI();
+    requestProcess();
+  }
+
+  for(const k of ['brush','color','maxShift','power','blur','guides']){
+    ui[k].addEventListener('input', onUI);
+  }
+
+  ui.btnEraser.addEventListener('click', () => {
+    state.eraser = !state.eraser;
+    state.mode = 'paint';
+    syncUI();
+    requestProcess();
+  });
+
+  ui.btnMoveAxis.addEventListener('click', () => {
+    state.mode = (state.mode === 'axis') ? 'paint' : 'axis';
+    state.eraser = false;
+    syncUI();
+    requestProcess();
+  });
+
+  ui.btnClear.addEventListener('click', () => {
+    paintCtx.clearRect(0,0,state.w,state.h);
+    requestProcess();
+  });
+
+  ui.btnCenterAxis.addEventListener('click', () => {
+    state.axisX = state.w/2;
+    state.axisY = state.h/2;
+    requestProcess();
+  });
+
+  ui.btnExample.addEventListener('click', () => {
+    drawExample();
+    requestProcess();
+  });
+
+  function pointerPos(ev, canvas){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - rect.left) * (state.w / rect.width),
+      y: (ev.clientY - rect.top) * (state.h / rect.height)
+    };
+  }
+
+  function beginStroke(x,y){
+    state.drawing = true;
+    state.lastX = x;
+    state.lastY = y;
+
+    paintCtx.save();
+    paintCtx.lineCap = 'round';
+    paintCtx.lineJoin = 'round';
+    paintCtx.lineWidth = state.brush;
+
+    if(state.eraser){
+      paintCtx.globalCompositeOperation = 'destination-out';
+      paintCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      paintCtx.globalCompositeOperation = 'source-over';
+      paintCtx.strokeStyle = state.color;
+    }
+
+    paintCtx.beginPath();
+    paintCtx.moveTo(x,y);
+    paintCtx.lineTo(x+0.01,y+0.01);
+    paintCtx.stroke();
+    paintCtx.restore();
+
+    requestProcess();
+  }
+
+  function continueStroke(x,y){
+    if(!state.drawing) return;
+
+    paintCtx.save();
+    paintCtx.lineCap = 'round';
+    paintCtx.lineJoin = 'round';
+    paintCtx.lineWidth = state.brush;
+
+    if(state.eraser){
+      paintCtx.globalCompositeOperation = 'destination-out';
+      paintCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      paintCtx.globalCompositeOperation = 'source-over';
+      paintCtx.strokeStyle = state.color;
+    }
+
+    paintCtx.beginPath();
+    paintCtx.moveTo(state.lastX, state.lastY);
+    paintCtx.lineTo(x,y);
+    paintCtx.stroke();
+    paintCtx.restore();
+
+    state.lastX = x;
+    state.lastY = y;
+
+    requestProcess();
+  }
+
+  function endStroke(){
+    state.drawing = false;
+  }
+
+  function beginAxisDrag(x,y){
+    state.drawing = true;
+    state.axisX = clamp(x, 0, state.w);
+    state.axisY = clamp(y, 0, state.h);
+    requestProcess();
+  }
+
+  function continueAxisDrag(x,y){
+    if(!state.drawing) return;
+    state.axisX = clamp(x, 0, state.w);
+    state.axisY = clamp(y, 0, state.h);
+    requestProcess();
+  }
+
+  inCanvas.addEventListener('pointerdown', (ev) => {
+    const p = pointerPos(ev, inCanvas);
+    inCanvas.setPointerCapture(ev.pointerId);
+
+    if(state.mode === 'axis') beginAxisDrag(p.x, p.y);
+    else beginStroke(p.x, p.y);
+
+    ev.preventDefault();
+  });
+
+  inCanvas.addEventListener('pointermove', (ev) => {
+    const p = pointerPos(ev, inCanvas);
+    setReadoutFrom(p.x, p.y);
+
+    if(!state.drawing) return;
+
+    if(state.mode === 'axis') continueAxisDrag(p.x, p.y);
+    else continueStroke(p.x, p.y);
+  });
+
+  inCanvas.addEventListener('pointerup', (ev) => {
+    endStroke();
+    try{ inCanvas.releasePointerCapture(ev.pointerId); }catch(_){ /* ignore */ }
+  });
+
+  inCanvas.addEventListener('pointerleave', () => setReadoutFrom(null, null));
+
+  outCanvas.addEventListener('pointermove', (ev) => {
+    const p = pointerPos(ev, outCanvas);
+    setReadoutFrom(p.x, p.y);
+  });
+  outCanvas.addEventListener('pointerleave', () => setReadoutFrom(null, null));
+
+  function drawExample(){
+    paintCtx.clearRect(0,0,state.w,state.h);
+
+    const pad = 26;
+
+    // Center bar
+    paintCtx.save();
+    paintCtx.fillStyle = '#ffffff';
+    paintCtx.fillRect(pad, state.h/2 - 20, state.w - 2*pad, 40);
+    paintCtx.fillStyle = '#000000';
+    paintCtx.fillRect(state.w*0.25, state.h/2 - 20, state.w*0.5, 40);
+    paintCtx.restore();
+
+    // Corner edge
+    paintCtx.save();
+    paintCtx.translate(state.w*0.72, state.h*0.18);
+    paintCtx.rotate(-0.35);
+    paintCtx.fillStyle = '#ffffff';
+    paintCtx.fillRect(-120, -14, 240, 28);
+    paintCtx.fillStyle = '#000000';
+    paintCtx.fillRect(0, -14, 120, 28);
+    paintCtx.restore();
+
+    // Text
+    paintCtx.save();
+    paintCtx.font = 'bold 40px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    paintCtx.fillStyle = '#ffffff';
+    paintCtx.fillText('EDGE', 36, 70);
+    paintCtx.font = 'bold 28px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    paintCtx.fillText('CENTER', state.w*0.36, state.h*0.82);
+    paintCtx.restore();
+
+    // Thin line
+    paintCtx.save();
+    paintCtx.strokeStyle = '#ffffff';
+    paintCtx.lineWidth = 3;
+    paintCtx.beginPath();
+    paintCtx.moveTo(30, state.h-40);
+    paintCtx.lineTo(state.w-30, state.h-60);
+    paintCtx.stroke();
+    paintCtx.restore();
+  }
+
+  function init(){
+    state.brush = parseInt(ui.brush.value, 10);
+    state.color = ui.color.value;
+    state.maxShift = parseFloat(ui.maxShift.value);
+    state.power = parseFloat(ui.power.value);
+    state.blur = parseFloat(ui.blur.value);
+    state.guides = parseInt(ui.guides.value, 10);
+
+    syncUI();
+    resize();
+
+    // Start with an example to make it immediately demonstrable
+    drawExample();
+    requestProcess();
+  }
+
+  window.addEventListener('resize', () => resize());
+  init();
+})();
+</script>
+</body>
+</html>
