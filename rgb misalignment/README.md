@@ -78,10 +78,13 @@ All below on a PC with projector attached. I'm using Windows.
 4. there's a menu on the right that is initially active - click on any place on image you've just loated, so hotkeys starts working.  
 Use arrows to shift R channel, press 2 to switch to B channel, press 1 to switch to R back. Alt makes movement smaller (1/100 of pixel instead of 1/10).
 
-For me red shift of [0.07, -0.30] and blue shift of [-0.12, 0.39] changed imag from this:  
-![before](before.jpg)  
-...to this:  
-![after](after.jpg)
+For me shifting red and blue color planes generated those before/after pairs (animated GIFs):  
+- icon text:  
+![icon text](result/1.gif)  
+- icon image:  
+![icon image](result/2.gif)
+- test pattern:
+![test pattern](result/3.gif)
 
 ### AI use
 All of the code above was developed with AI in a loop. Human designed & tested it, AIdid the implementation.  
