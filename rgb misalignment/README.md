@@ -78,16 +78,31 @@ All below on a PC with projector attached. I'm using Windows.
 4. there's a menu on the right that is initially active - click on any place on image you've just loated, so hotkeys starts working.  
 Use arrows to shift R channel, press 2 to switch to B channel, press 1 to switch to R back. Alt makes movement smaller (1/100 of pixel instead of 1/10).
 
-For me shifting red and blue color planes generated those before/after pairs (animated GIFs):  
+For me shifting red and blue color planes generated those before/after pairs (animated GIFs, you might need to press "play" button):  
 - icon text:  
 ![icon text](result/1.gif)  
 - icon image:  
 ![icon image](result/2.gif)
-- test pattern:
+- test pattern:  
 ![test pattern](result/3.gif)
 
+
+
+### comments to results
+This type of color issues are quite common in projectors with 3 light paths (either because of **light engine**, 3 panels, or both). Usually there are HW mechanisms to correct for this (for example [Epson](https://files.support.epson.com/docid/cpd5/cpd57551/source/adjustments/tasks/panel_aligning_four_corners.html) and even high-end Christie projectors used in cinemas suffer from this and have a "panel convergence" function).
+
+So there are 2 solutions for it:
+- hardware - I'd expect a mechanism that would adjust some part of light path to correct for this
+- software - a color shift using 2x2 convolution can solve most of the problem
+...saving grace is that software solution looks quite good.
+#### can we do better ?
+...of course!  
+This and similar issues are fairly easy to correct, and because similar issues happen in photography there's a great body of knowledge how to this and simiar issues (chromatic aberration, vignetting), most using the same algorithm. When using something more (screen-adaptive, variable convolution) we could recover most of qulaity loss and even increase overall sharpness.  
+...see [here](details.md) for more details. 
+
+
 ### AI use
-All of the code above was developed with AI in a loop. Human designed & tested it, AIdid the implementation.  
+All of the code above was developed with AI in a loop. Human designed & tested it, AI did the implementation.  
 On a personal note, it's like a having a quite competent development team at my fingertips.
 
 ### next steps
