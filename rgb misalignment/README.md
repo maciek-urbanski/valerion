@@ -1,9 +1,9 @@
 # RGB misaligment issue
-Valerion VisionMaster projectors have a color shift issue that presents itself as a red & blue halos around light objects.
+Some Valerion VisionMaster projectors have a color shift issue that presents itself as a red & blue halos around light objects.  
 
-If you want to skip techinical detail and go to solution directly - clik [here](#results-and-demo-poc).
+If you are affected and eager to test out go to single-image proof-of-concept of a solution - clik [here](#results-and-demo-poc).
 
-## background 
+## ![icon](icon/background.png) background 
 Historically there were many issues with similar characteristics:
 - **misonvergence** in CRT TVs/monitors  
 red, green, and blue electron beams don’t land on exactly the same spot on the phosphor
@@ -12,7 +12,8 @@ red, green, and blue images from the three panels/chips don’t line up perfectl
 - **chromatic aberration**  
 caused by the projector’s optics focusing different wavelengths (colors) at different positions, so red/green/blue do not overlap perfectly
 
-Each projector has a **light engine** which is colloquial term for hardware that generates a light and directs it towards a panel(s) that modulate light, so uniform light becomes an image.
+### light engine
+Each projector has a **light engine** which is colloquial term for hardware that generates a light and directs it towards a panel(s) that modulate light, so uniform light can become an image.
 
 If projector has a 3 panels, its **light engine** needs to produce 3 light beams (usually red, green and blue) shining precisely on those panels. Then generated images are aligned together using [dichroic mirrors](https://www.findlight.net/blog/dichroic-mirrors-explained-a-comprehensive-guide/) (passes one color, reflect others) or [dichroic prisms](https://en.wikipedia.org/wiki/Dichroic_prism) (splits/combines different colors to/from one direction) to form a converged path that goes out through the projector optics.
 
@@ -77,7 +78,7 @@ Read all steps first!
 3. load (or paste - Ctrl V works) any image  
 Best to use screenshots from offending content. My usage is:  
 Alt+TAB to switch from full-screen browser to application where issues is visible, make a screenshot (Print Screen or Win+Shift+S, select whole image), then switch back to full-screen browser and paste the image (Ctrl+V).  
-...but processing the image from file is allso supported. Images above 4K are re-scaled automatically.
+...but processing the image from file is allso supported. Images above 4K are re-scaled automatically. Few test images (tweaked from from [VintageLenses](http://vintagelenses.com/?cat=36)) are [here](test%20images).
 
 Use arrows to shift R channel, press 2 to switch to B channel, press 1 to switch to R back. Alt makes movement smaller (1/100 of pixel instead of 1/10). Everything is described im on the right.
 
