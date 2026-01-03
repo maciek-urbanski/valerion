@@ -21,7 +21,7 @@ If projector has 1 panels, its **light engine** needs to produce 1 light beam sh
 
 For simplifaction I'm ingnoring color wheels and lamps, LEDs, and hybrid light sources.
 
-## nature of the issue
+## ![](icon/lg.png) nature of the issue
 Velerion projectors are 1 panel projector using micromirrors ([DLP/DMD](https://en.wikipedia.org/wiki/Digital_micromirror_device)) with 3 laser sources in its **light engine**.
 
 So at the beginning we can cross-out CRT misaligment (duh!) and panel misalignment (theres only 1 panel).
