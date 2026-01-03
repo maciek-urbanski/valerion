@@ -70,7 +70,7 @@ In order for this demo to work one needs to minimize amount of image processing 
 
 ### usage
 All below on a PC with projector attached. I'm using Windows.
-1. Open HTM with [proof-of-concept](https://maciek-urbanski.github.io/valerion/rgb%20misalignment/PoC.html).
+1. Open HTML with [proof-of-concept](https://maciek-urbanski.github.io/valerion/rgb%20misalignment/PoC.html).
 2. make browser full-screen w/o border (F11 for Chrome/Brave/...)
 3. load any image  
     - best to use screenshots from offending content
