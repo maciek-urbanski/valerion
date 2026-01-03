@@ -63,20 +63,23 @@ With this data I could devise a proof-of-concept of a software fix: a trivial al
 
 ### preequisities
 In order for this demo to work one needs to minimize amount of image processing the Valerion does by:
-- Picture Mode: HDR Game
+- Picture Mode: HDR Game <-this one is **very important**
 - Projector->Ultra Sharp Mode: ON
 - Projector->DLP Turbo Mode: ON
 - all AI-related stuff: OFF
 
 ### usage
 All below on a PC with projector attached. I'm using Windows.
+
+Read all steps first!
 1. Open HTML with [proof-of-concept](https://maciek-urbanski.github.io/valerion/rgb%20misalignment/PoC.html).
 2. make browser full-screen w/o border (F11 for Chrome/Brave/...)
-3. load any image  
-    - best to use screenshots from offending content
-    - in [test_images](test_images) subdirectory there are some test images to get you started
-4. there's a menu on the right that is initially active - click on any place on image you've just loated, so hotkeys starts working.  
-Use arrows to shift R channel, press 2 to switch to B channel, press 1 to switch to R back. Alt makes movement smaller (1/100 of pixel instead of 1/10).
+3. load (or paste - Ctrl V works) any image  
+Best to use screenshots from offending content. My usage is:  
+Alt+TAB to switch from full-screen browser to application where issues is visible, make a screenshot (Print Screen or Win+Shift+S, select whole image), then switch back to full-screen browser and paste the image (Ctrl+V).  
+...but processing the image from file is allso supported. Images above 4K are re-scaled automatically.
+
+Use arrows to shift R channel, press 2 to switch to B channel, press 1 to switch to R back. Alt makes movement smaller (1/100 of pixel instead of 1/10). Everything is described im on the right.
 
 For me shifting red and blue color planes generated those before/after pairs (animated GIFs, you might need to press "play" button):  
 - icon text:  
