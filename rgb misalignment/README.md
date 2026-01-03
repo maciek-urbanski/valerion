@@ -80,7 +80,7 @@ Read all steps first!
 3. load (or paste - Ctrl V works) any image  
 Best to use screenshots from offending content. My usage is:  
 Alt+TAB to switch from full-screen browser to application where issues is visible, make a screenshot (Print Screen or Win+Shift+S, select whole image), then switch back to full-screen browser and paste the image (Ctrl+V).  
-...but processing the image from file is allso supported. Images above 4K are re-scaled automatically. Few test images (tweaked from from [VintageLenses](http://vintagelenses.com/?cat=36)) are [here](test%20images).
+...but processing the image from file is allso supported. Images above 4K are re-scaled automatically. Few test images (tweaked from from [VintageLenses](http://vintagelenses.com/?cat=36)) are [here](https://github.com/maciek-urbanski/valerion/tree/master/rgb%20misalignment/test%20images).
 
 Use arrows to shift R channel, press 2 to switch to B channel, press 1 to switch to R back. Alt makes movement smaller (1/100 of pixel instead of 1/10). Everything is described im on the right.
 
