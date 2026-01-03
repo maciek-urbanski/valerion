@@ -3,7 +3,7 @@ Some Valerion VisionMaster projectors have a color shift issue that presents its
 
 If you are affected and eager to test out go to single-image proof-of-concept of a solution - clik [here](#results-and-demo-poc).
 
-## ![](icon/background.png) background 
+## ![](icon/bg.png) background 
 Historically there were many issues with similar characteristics:
 - **misonvergence** in CRT TVs/monitors  
 red, green, and blue electron beams don’t land on exactly the same spot on the phosphor
