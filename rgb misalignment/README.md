@@ -52,7 +52,7 @@ ArUco markers allow capturing only part of image (with at least 4 markers) and c
 Statistics for each marker are kept and processed to reduce noise in final shift estimation.
 For each marker I calculate separate color shifts and present those across image in form of 2D shift vector for R-G and another for R-G per each cell.
 
-All of this is quite complex for unitiated, but I'm adding all scripts to [scripts](scripts) subdirectory, and can expaln the details for the brave souls that want to replicate.  
+All of this is quite complex for unitiated, but I'm adding all scripts to [scripts](https://github.com/maciek-urbanski/valerion/tree/master/rgb%20misalignment/scripts) subdirectory, and can expaln the details for the brave souls that want to replicate.  
 Bear in mind that requirements include:
 - good camera in manual mode (full F & ISO control with RAW/not collor balanced) is required
 - ability to run python, install missing modules
