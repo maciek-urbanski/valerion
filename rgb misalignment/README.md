@@ -104,7 +104,7 @@ So there are 2 solutions for it:
 ...saving grace is that software solution looks quite good.
 #### can we do better ?
 ...of course!  
-This and similar issues are fairly easy to correct, and because similar issues happen in photography there's a great body of knowledge how to this and simiar issues (chromatic aberration, vignetting), most using the same algorithm. When using something more (screen-adaptive, variable convolution) we could recover most of qulaity loss and even increase overall sharpness.  
+This and similar issues are fairly easy to correct, and because similar issues happen in photography there's a great body of knowledge how to fix this and simiar issues (chromatic aberration, vignetting), in most ases using the same algorithm. When using something more (screen-adaptive, variable convolution) we could recover most of quality loss and even increase overall sharpness.  
 ...see [here](details.md) for more details. 
 
 
