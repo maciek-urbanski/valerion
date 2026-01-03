@@ -94,6 +94,7 @@ This type of color issues are quite common in projectors with 3 light paths (eit
 So there are 2 solutions for it:
 - hardware - I'd expect a mechanism that would adjust some part of light path to correct for this
 - software - a color shift using 2x2 convolution can solve most of the problem
+
 ...saving grace is that software solution looks quite good.
 #### can we do better ?
 ...of course!  
