@@ -1,4 +1,4 @@
-# RGB misaligment issue
+# ![](icon/pr.png) RGB misaligment issue
 Some Valerion VisionMaster projectors have a color shift issue that presents itself as a red & blue halos around light objects.  
 
 If you are affected and eager to test out go to single-image proof-of-concept of a solution - clik [here](#results-and-demo-poc).
@@ -21,7 +21,7 @@ If projector has 1 panels, its **light engine** needs to produce 1 light beam sh
 
 For simplifaction I'm ingnoring color wheels and lamps, LEDs, and hybrid light sources.
 
-## ![](icon/lg.png) nature of the issue
+## ![](icon/fl.png) nature of the issue
 Velerion projectors are 1 panel projector using micromirrors ([DLP/DMD](https://en.wikipedia.org/wiki/Digital_micromirror_device)) with 3 laser sources in its **light engine**.
 
 So at the beginning we can cross-out CRT misaligment (duh!) and panel misalignment (theres only 1 panel).
@@ -42,7 +42,7 @@ So the diffrentiating factor between chromatic aberration and **light engine** i
 - if color shift changes across the screen (with center having no color shift) it would be a chromatic aberration
 - if color shift is uniform across the screen - it would be **light engine** issue
 
-# analysis
+# ![](icon/lg.png) analysis
 To determin the issue I've designed a [test plate](https://maciek-urbanski.github.io/valerion/rgb%20misalignment/test_plate.png) that displays a pattern of cells, each cell having 2 parts:
 - center with ArUco marker that encodes cell position in image (see OpenCV documentiation [here](https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html))
 - border with spots that allow for calculating shifts between R-G and B-G color planes using normalized cross correlation
@@ -57,7 +57,9 @@ Bear in mind that requirements include:
 - good camera in manual mode (full F & ISO control with RAW/not collor balanced) is required
 - ability to run python, install missing modules
 
-# [results and demo PoC]
+<br/>
+
+# ![](icon/cp.png)[results and demo PoC]
 Analysis of my Valerion VisonMaster MAX shows that effect is uniform across the screen, so **its a light engine issue** not a ~~chromatic aberration~~ .
 
 With this data I could devise a proof-of-concept of a software fix: a trivial algorithm that pre-shifts image planes before sending them to my projector. Shifts cancel each other and image has correct colors (and slightly better focus).
